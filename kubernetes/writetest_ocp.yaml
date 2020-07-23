@@ -1,21 +1,9 @@
-
-kind: StorageClass
-apiVersion: storage.k8s.io/v1beta1
-metadata:
-    name: fio-tester-class-write
-provisioner: kubernetes.io/portworx-volume
-parameters:
-   repl: "1"
-
----
-
-##### Portworx persistent volume claim
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
    name: fio-data-write
    annotations:
-     volume.beta.kubernetes.io/storage-class: fio-tester-class-write
+     volume.beta.kubernetes.io/storage-class: # nombre de la storageclass que se está utilizando 
 spec:
    accessModes:
      - ReadWriteOnce
@@ -25,7 +13,7 @@ spec:
 
 ---
 
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: fio-tester-write
@@ -38,6 +26,9 @@ spec:
       maxUnavailable: 1
     type: RollingUpdate
   replicas: 1
+  selector:
+    matchLabels:
+      name: fio-testing-write
   template:
     metadata:
       labels:
@@ -65,17 +56,37 @@ spec:
 
 ---
 
-apiVersion: v1
 kind: Service
+apiVersion: v1
 metadata:
   name: fiotools-write
+  namespace: default
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8001
+      targetPort: 8000
+  selector:
+    name: fio-testing-write
+  type: ClusterIP
+  sessionAffinity: None
+    
+---
+
+kind: Route # solo válido para OpenShift
+apiVersion: route.openshift.io/v1
+metadata:
+  name: fiowrite
+  namespace: default
   labels:
     name: fiotools-write
 spec:
-  type: NodePort
-  ports:
-    - port: 8000
-      targetPort: 8000
-      name: http
-  selector:
-    app: fio-testing-write
+  host: # URL a utilizar
+  to:
+    kind: Service
+    name: fiotools-write
+    weight: 100
+  port:
+    targetPort: http
+  wildcardPolicy: None
