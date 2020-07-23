@@ -76,7 +76,7 @@ spec:
 kind: Route # solo válido para OpenShift
 apiVersion: route.openshift.io/v1
 metadata:
-  name: fio
+  name: fioread
   namespace: default
   labels:
     name: fiotools-read
